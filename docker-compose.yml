@@ -1,0 +1,49 @@
+version: "3.8"
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    environment:
+      - MODEL_NAME=Qwen/Qwen2.5-7B-Instruct
+      - PORT=8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./model-cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  backend:
+    build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 9000
+    environment:
+      - ASR_MODEL=medium
+      - TTS_MODEL=tts_models/en/ljspeech/tacotron2-DDC
+      - VLLM_HOST=http://vllm:8000
+    ports:
+      - "9000:9000"
+    depends_on:
+      - vllm
+    volumes:
+      - ./model-cache:/home/prod/.cache
+      - ./backend:/backend
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  frontend:
+    image: nginx:alpine
+    volumes:
+      - ./public:/usr/share/nginx/html:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
