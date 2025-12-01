@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hello Agent Voice Interface</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 2rem; text-align: center; }
+      button { padding: 1rem 2rem; font-size: 1rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Hello Agent Voice Interface</h1>
+    <p>Hold the button and speak; release to send your audio to the agent.</p>
+    <button id="recordButton">Hold to talk</button>
+    <script>
+      const ws = new WebSocket("ws://" + location.hostname + ":9000/ws");
+      const recordButton = document.getElementById("recordButton");
+      let mediaRecorder;
+      let chunks = [];
+
+      ws.onmessage = (event) => {
+        const audioBlob = new Blob([event.data], { type: "audio/wav" });
+        const url = URL.createObjectURL(audioBlob);
+        const audio = new Audio(url);
+        audio.play();
+      };
+
+      recordButton.onmousedown = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        chunks = [];
+        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          blob.arrayBuffer().then((buffer) => ws.send(buffer));
+        };
+        mediaRecorder.start();
+      };
+
+      recordButton.onmouseup = () => {
+        mediaRecorder.stop();
+      };
+    </script>
+  </body>
+</html>
