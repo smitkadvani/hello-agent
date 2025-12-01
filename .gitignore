@@ -1,0 +1,15 @@
+# Ignore Python cache directories
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Ignore virtual environments
+venv/
+.env/
+
+# Ignore local Docker volumes
+model-cache/
+
+# Ignore editor swap files
+*.swp
+*.swo
